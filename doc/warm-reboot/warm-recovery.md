@@ -20,14 +20,13 @@ The goal of warm recovery is to restart SONiC process/dockers from unexpected fa
 
 # Use cases
 
-![use cases](img/use-cases.png)
-
 ## BGP docker warm recovery
 Bgp docker will be restarted in case bgpcfgd/bgpd/zebra/fpmsyncd crashes.
 Upon app crash, the bgp docker will restart gracefully and gets synchronized with the latest routing state via talking with peers, fpmsyncd uses the input from BGP to program appDB and it also deals with any stale/new routes besides those routes without change. RouteOrch responds to the operation requests from fpmsyncd and propagates any change down to syncd.
 
 ## Teamd docker warm recovery
 teamd docker will be restarted in case teammgrd/teamsyncd/teamd crashes.
+If teammgrd/teamsyncd crashes, we will stop teamd gracefully to allow teamd to send last valid update to be sure we'll have 90 seconds reboot time available.Otherwise, we will need to recover the teamd docker within 90 seconds.
 
 ## SWSS docker warm recovery
 SWSS docker will be restarted in case XXXcfgd/YYYorch/ZZZsyncd crashes
@@ -36,16 +35,16 @@ SWSS docker will be restarted in case XXXcfgd/YYYorch/ZZZsyncd crashes
 It is not a requirement on syncd and ASIC/LibSAI due to dependency on ASIC processing.
 
 # Warm Recovery Steps
-
-![warm recovery steps](img/warm-recovery-steps.png)
-
 ## process event handler
 * listens to process state change event from sysmonDB
+
 or
+
 * periodically check the status of each process and handle failure
 ## pre-check
 * check if process is configured with auto-recovery
 * check if process is still alive
+* check if warm-recovery is already started
 * check process restart limit
 ## pre-processing
 * delay some time if necessary
