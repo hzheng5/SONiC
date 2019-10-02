@@ -6,7 +6,8 @@ Table of Contents
   * [BGP docker warm recovery](#bgp-docker-warm-recovery)
   * [TEAMD docker warm recovery](#teamd-docker-warm-recovery)
   * [SWSS docker warm recovery](#swss-docker-warm-recovery)
-  * [SYNCD docker warm recovery](#syncd-docker-warm-recovery)
+  * [SYNCD and DATABASE dockers](#syncd-and-database-dockers)
+  * [OTHER dockers](#other-dockers)
 * [Warm Recovery Steps](#warm-recovery-steps)
   * [process event handler](#process-event-handler)
   * [pre-check](#pre-check)
@@ -26,13 +27,17 @@ Upon app crash, the bgp docker will restart gracefully and gets synchronized wit
 
 ## Teamd docker warm recovery
 teamd docker will be restarted in case teammgrd/teamsyncd/teamd crashes.
-If teammgrd/teamsyncd crashes, we will stop teamd gracefully to allow teamd to send last valid update to be sure we'll have 90 seconds reboot time available.Otherwise, we will need to recover the teamd docker within 90 seconds.
+If teammgrd/teamsyncd crashes, we will stop teamd gracefully to allow teamd to send last valid update to be sure we'll have 90 seconds reboot time available.Otherwise, we will need to recover the teamd docker within 60 seconds.
 
 ## SWSS docker warm recovery
 SWSS docker will be restarted in case XXXcfgd/YYYorch/ZZZsyncd crashes
 
-## SYNCD docker warm recovery
+## SYNCD and DATABASE dockers
 It is not a requirement on syncd and ASIC/LibSAI due to dependency on ASIC processing.
+Also since our warm-recovery process is depending on Redis-DB, so we are not going to support warm-recovery for Database docker.
+
+## Other dockers
+For SNMP/DHCP/Telemetry/LLDP/pmon dockers, they can be restarted without affecting the data plane.
 
 # Warm Recovery Steps
 ![warm recovery steps](img/warm-recovery-steps.png)
@@ -65,7 +70,7 @@ or
   * bgp_graceful_restart_preserve_fw_state
 ## TEAMD docker
 * monitor individual team daemon for each port channel
-* clean up teamsyncd reconcile logic
+* clean up teamsyncd reconcile logic to finish warm recovery within 60 seconds
 ## SWSS docker
 * atomic and syncronized operations
 * clean up services dependencies
