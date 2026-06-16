@@ -1,6 +1,6 @@
 # Vxlan SONiC
 # High Level Design Document
-### Rev 1.3
+### Rev 1.4
 
 # Table of Contents
   * [List of Tables](#list-of-tables)
@@ -34,13 +34,14 @@
   * [4 Example configuration](#4-example-configuration)
 
 ###### Revision
-| Rev |     Date    |       Author       | Change Description                |
-|:---:|:-----------:|:------------------:|-----------------------------------|
-| 0.1 |             |     Prince Sunny   | Initial version                   |
-| 1.0 |             |     Prince Sunny   | Review comments/feedback          |
-| 1.1 |             |     Prince Sunny   | Review comments                   |
-| 1.2 |             |     Prince Sunny   | Design change for VNET Table flow |
-| 1.3 |             |     Prince Sunny   | VNet and Route Delete flow        |
+| Rev |     Date    |       Author       | Change Description                       |
+|:---:|:-----------:|:------------------:|------------------------------------------|
+| 0.1 |             |     Prince Sunny   | Initial version                          |
+| 1.0 |             |     Prince Sunny   | Review comments/feedback                 |
+| 1.1 |             |     Prince Sunny   | Review comments                          |
+| 1.2 |             |     Prince Sunny   | Design change for VNET Table flow        |
+| 1.3 |             |     Prince Sunny   | VNet and Route Delete flow               |
+| 1.4 |             |     Anish Narsian  | Doc ref for consistent hashing on Tunnel |
 
 # About this Manual
 This document provides general information about the Vxlan feature implementation in SONiC.
@@ -74,6 +75,8 @@ Phase #2
 - Should be able to do HER for unicast traffic based on configured flood list
 - CLI commands to configure Vxlan
 
+Phase #3:
+- Ability to enable consistent hashing for Vnet Vxlan tunnel next hops(VNET_ROUTE_TUNNEL), the detailed design for this can be found [here](../vxlan/Consistent_ecmp_for_Vxlan_tunnel.md)
 
 ## 1.2 Orchagent requirements
 ### Vxlan orchagent:
@@ -148,6 +151,7 @@ VXLAN_TUNNEL_MAP|{{tunnel_name}}|{{tunnel_map}}
 VNET|{{vnet_name}} 
     "vxlan_tunnel": {{tunnel_name}}
     "vni": {{vni}} 
+    "scope": {{"default"}} (OPTIONAL)
     "peer_list": {{vnet_name_list}} (OPTIONAL)
 
 INTERFACE|{{intf_name}} 
@@ -197,6 +201,7 @@ key                                   = VNET:name                     ; Vnet nam
 ; field                               = value
 VXLAN_TUNNEL                          = tunnel_name                   ; refers to the Vxlan tunnel name
 VNI                                   = DIGITS                        ; 1 to 16 million VNI values
+SCOPE                                 = Vnet Scope                    ; Whether to use default or non-default VRF
 PEER_LIST                             = \*vnet_name                   ; vnet names seperate by "," 
                                                                              (empty indicates no peering)
 ```
@@ -220,7 +225,7 @@ key                                   = NEIGH_TABLE:name:ip_address   ; Vnet nei
 family                                = IPv4/IPv6                     ; Address family
 ```
 
-Please refer to the [schema](https://github.com/Azure/sonic-swss/blob/master/doc/swss-schema.md) document for details on value annotations. 
+Please refer to the [schema](https://github.com/sonic-net/sonic-swss/blob/master/doc/swss-schema.md) document for details on value annotations. 
 
 ## 2.2 APP DB
 Two new tables would be introduced to specify routes and tunnel end points in VNet domain. 
@@ -247,6 +252,7 @@ VRFMgrD creates the following VNET Table
 VNET_TABLE:{{vnet_name}}
     "vxlan_tunnel": {{tunnel_name}}
     "vni": {{vni}} 
+    "scope": {{"default"}} 
     "peer_list": {{ vnet_name_list }}
 ```
 
@@ -297,7 +303,7 @@ PEER_LIST                             = \*vnet_name                   ; vnet nam
 Following orchagents shall be modified. Flow diagrams are captured in a later section. 
 
 
-![](https://github.com/Azure/SONiC/blob/master/images/vxlan_hld/vnet_vxlan_orch.png)
+![](vnet_vxlan_orch.png)
 
  ### VxlanOrch
  This is the major subsystem for Vxlan that handles configuration request. Vxlanorch creates the tunnel and attaches encap and decap mappers. Seperate tunnels are created for L2 Vxlan and L3 Vxlan and can attach different VLAN/VNI or VRF/VNI to respective tunnel. 
@@ -324,7 +330,7 @@ Following orchagents shall be modified. Flow diagrams are captured in a later se
  
  The overall data flow diagram is captured below for all TABLE updates. 
  
- ![](https://github.com/Azure/SONiC/blob/master/images/vxlan_hld/vnet_vxlan_data_flow.png)
+ ![](vnet_vxlan_data_flow.png)
  
  
 ## 2.4 SAI
@@ -401,13 +407,13 @@ Commands:
 # 3 Flows
 
 ## 3.1 Vxlan VNet peering 
-![](https://github.com/Azure/SONiC/blob/master/images/vxlan_hld/vnet_vxlan_cntrl_flow_1.png)
+![](vnet_vxlan_cntrl_flow_1.png)
 
-![](https://github.com/Azure/SONiC/blob/master/images/vxlan_hld/vnet_vxlan_cntrl_flow_2.png)
+![](vnet_vxlan_cntrl_flow_2.png)
 
-![](https://github.com/Azure/SONiC/blob/master/images/vxlan_hld/vnet_vxlan_route_delete.png)
+![](vnet_vxlan_route_delete.png)
 
-![](https://github.com/Azure/SONiC/blob/master/images/vxlan_hld/vnet_vxlan_vnet_delete.png)
+![](vnet_vxlan_vnet_delete.png)
 
 ## Layer 2 Vxlan 
 TBD 
